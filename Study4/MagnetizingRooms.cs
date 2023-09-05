@@ -7,6 +7,7 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
 using Grasshopper.Kernel.Types;
+
 using Rhino.Geometry;
 
 namespace FloorPlan_Generator
@@ -238,7 +239,7 @@ namespace FloorPlan_Generator
 
 
                     //if (!TryPlaceNewRoom(roomAreas[roomNum - 1], roomNum, ref grid, adjArray, maxAdjDistance))
-                    if (!PlaceNewRoom_TEST(ref grid, roomList[roomNum - 1].RoomArea, roomNum, adjArray, maxAdjDistance, roomList[roomNum - 1].isHall))
+                    if (!PlaceNewRoom_TEST(ref grid, (int)roomList[roomNum - 1].RoomArea, roomNum, adjArray, maxAdjDistance, roomList[roomNum - 1].isHall))
                     { break; }
 
                 }

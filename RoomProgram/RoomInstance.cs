@@ -38,9 +38,10 @@ namespace FloorPlan_Generator
         }
 
         public int RoomArea = 20;
+        public double RoomLength = 4.0;
         public int RoomId;// = maxId++;
         public static int maxId = 0;
-        public static List<int> entranceIds; // If there is an entrance which should be placed first, it's id will be stored here
+        public static List<int> entranceIds = new List<int>(); // If there is an entrance which should be placed first, it's id will be stored here
         public string RoomName;// = "Room Name";
         public bool isHall = false; // true if the room is to be a hall (connecting-space)
         public bool hasMissingAdj = false;

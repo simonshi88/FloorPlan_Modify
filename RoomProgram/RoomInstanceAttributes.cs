@@ -26,7 +26,12 @@ namespace FloorPlan_Generator
             //  RoomAreaRectangle = new Rectangle(new System.Drawing.Point((int)Bounds.Location.X, (int)Bounds.Location.Y + 40), new Size(60, 20));
             // RoomNameRectangle = new Rectangle(new System.Drawing.Point((int)Bounds.Location.X, (int)Bounds.Location.Y + 40), new Size(60, 20));
 
-            if (RoomArea == null) RoomArea = GH_Capsule.CreateTextCapsule(new Rectangle(), new Rectangle(), GH_Palette.Black, param.RoomArea.ToString());
+            if (RoomArea == null)
+                RoomArea = GH_Capsule.CreateTextCapsule(new Rectangle(), new Rectangle(), GH_Palette.Black, param.RoomArea.ToString());
+
+            if (RoomLength == null)
+                RoomLength = GH_Capsule.CreateTextCapsule(new Rectangle(), new Rectangle(), GH_Palette.Black, param.RoomLength.ToString());
+
             RoomName = GH_Capsule.CreateTextCapsule(new Rectangle(), new Rectangle(), GH_Palette.Black, param.RoomName);
 
             roomBrush = Brushes.Gray;
@@ -42,10 +47,12 @@ namespace FloorPlan_Generator
         }
 
         public GH_Capsule RoomArea;//= GH_Capsule.CreateTextCapsule(new Rectangle(), new Rectangle(), GH_Palette.Black, p);
+        public GH_Capsule RoomLength;
         public GH_Capsule RoomName;//= GH_Capsule.CreateTextCapsule(new Rectangle(), new Rectangle(), GH_Palette.Black, "RoomName");
                                    //  public GH_Capsule RoomId;//= GH_Capsule.CreateTextCapsule(new Rectangle(), new Rectangle(), GH_Palette.Black, "RoomName");
 
         Rectangle RoomAreaRectangle;
+        Rectangle RoomLengthRectangle;
         Rectangle RoomNameRectangle;
         Rectangle RoomIdRectangle;
 
@@ -111,7 +118,8 @@ namespace FloorPlan_Generator
 
                     RoomNameRectangle = new Rectangle(new System.Drawing.Point((int)Bounds.Location.X + 28, (int)Bounds.Location.Y + 55), new Size(94, 20));
                     RoomAreaRectangle = new Rectangle(new System.Drawing.Point((int)Bounds.Location.X + 65, (int)Bounds.Location.Y + 80), new Size(57, 20));
-                    RoomIdRectangle = new Rectangle(new System.Drawing.Point((int)Bounds.Location.X + 35, (int)Bounds.Location.Y + 105), new Size(80, 40));
+                    RoomLengthRectangle = new Rectangle(new System.Drawing.Point((int)Bounds.Location.X + 65, (int)Bounds.Location.Y + 105), new Size(57, 20));
+                    RoomIdRectangle = new Rectangle(new System.Drawing.Point((int)Bounds.Location.X + 35, (int)Bounds.Location.Y + 130), new Size(80, 40));
 
                     graphics.DrawString("m² :", SystemFonts.IconTitleFont, Brushes.Black, new RectangleF(new System.Drawing.Point((int)Bounds.Location.X + 35, (int)Bounds.Location.Y + 81), new Size(30, 20)));
                     if (!RoomInstance.entranceIds.Contains(roomInstance.RoomId))
@@ -127,6 +135,10 @@ namespace FloorPlan_Generator
                     RoomArea = GH_Capsule.CreateTextCapsule(RoomAreaRectangle, InflateRect(RoomAreaRectangle, InflateAmount, InflateAmount), GH_Palette.Pink, roomInstance.RoomArea.ToString());
                     RoomArea.Render(graphics, GH_Skin.palette_white_standard);
                     RoomArea.Dispose();
+
+                    RoomLength = GH_Capsule.CreateTextCapsule(RoomLengthRectangle, InflateRect(RoomLengthRectangle, InflateAmount, InflateAmount), GH_Palette.Pink, roomInstance.RoomLength.ToString());
+                    RoomLength.Render(graphics, GH_Skin.palette_white_standard);
+                    RoomLength.Dispose();
                 }
                 else
                 {
@@ -330,6 +342,17 @@ namespace FloorPlan_Generator
                 }
 
 
+                if (this.RoomLength.Contains(e.CanvasLocation))
+                {
+                    var field = new CapsuleInputBase(RoomLength, roomInstance, RoomInstanceVar.RoomLength)
+                    {
+                        Bounds = GH_Convert.ToRectangle(RoomLength.Box)
+                    };
+
+                    field.ShowTextInputBox(sender, RoomLength.Text, true, false, matrix);
+                }
+
+
                 if (this.RoomName.Contains(e.CanvasLocation))
                 {
                     var field = new CapsuleInputBase(RoomName, roomInstance, RoomInstanceVar.RoomName)
@@ -381,6 +404,7 @@ namespace FloorPlan_Generator
             writer.SetString("RoomName", (Owner as RoomInstance).RoomName);
             //    writer.SetInt32("RoomId", (int)(Owner as RoomInstance).RoomId);
             writer.SetDouble("RoomArea", (Owner as RoomInstance).RoomArea);
+            writer.SetDouble("RoomLength", (Owner as RoomInstance).RoomLength);
 
             string temp = "";
             foreach (int a in RoomInstance.entranceIds)
@@ -405,6 +429,8 @@ namespace FloorPlan_Generator
                                                                             //    (Owner as RoomInstance).RoomId = (uint)reader.GetInt32("RoomId");//, (int)(Owner as RoomInstance).RoomId);
             (Owner as RoomInstance).RoomArea = (int)Math.Floor(reader.GetDouble("RoomArea"));//, (Owner as RoomInstance).RoomArea);
 
+            //(Owner as RoomInstance).RoomLength = Math.Floor(reader.GetDouble("RoomLength"));
+
             RoomInstance.entranceIds = new List<int>();
             string temp = "";
             try
@@ -426,7 +452,7 @@ namespace FloorPlan_Generator
         }
     }
 
-    public enum RoomInstanceVar { RoomName, RoomArea };
+    public enum RoomInstanceVar { RoomName, RoomArea, RoomLength };
 
     class CapsuleInputBase : Grasshopper.GUI.Base.GH_TextBoxInputBase
     {
@@ -454,6 +480,10 @@ namespace FloorPlan_Generator
                 case (RoomInstanceVar.RoomArea):
                     _roomInstance.RoomArea = Int32.Parse(text);
                     break;
+                case (RoomInstanceVar.RoomLength):
+                    _roomInstance.RoomLength = double.Parse(text);
+                    break;
+
             }
             _roomInstance.ExpireSolution(true);
             if ((_roomInstance.Attributes as RoomInstanceAttributes).AssignedHouseInstance != null)
