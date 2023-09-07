@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using Grasshopper;
 using Grasshopper.GUI.Canvas;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Attributes;
+using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
 
@@ -51,8 +53,11 @@ namespace FloorPlan_Generator
             // pManager.AddPointParameter("Starting Points", "Starting Points", "Starting Points", GH_ParamAccess.list);
             // pManager.AddGenericParameter("RoomList", "RoomList", "RoomList", GH_ParamAccess.list);
             pManager.AddGenericParameter("House Instance", "HI", "House Instance", GH_ParamAccess.item);
-            pManager.AddIntegerParameter("Iterations", "I", "Iteratins (n*n*n)", GH_ParamAccess.item, 3);
+            pManager.AddIntegerParameter("Iterations", "I", "显示迭代多少次出结果", GH_ParamAccess.item, 3);
             pManager.AddNumberParameter("MaxAdjDistance", "MAD", "MaxAdjDistance", GH_ParamAccess.item, 2);
+
+            pManager.AddIntegerParameter("Display Number", "N", "显示遗传算法最优的几个", GH_ParamAccess.item, 4);
+            pManager.AddIntegerParameter("Gap of Result", "G", "从最优排序取结果，间隔值", GH_ParamAccess.item, 5);
             // pManager.AddTextParameter("Adjacencies", "Adjacencies", "Adjacencies as list of string \"1 - 3, 2 - 4,..\"", GH_ParamAccess.list, "0 - 0");
         }
 
@@ -61,14 +66,14 @@ namespace FloorPlan_Generator
         /// </summary>
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
-            pManager.AddBrepParameter("Corridors", "C", "Corridors as Breps", GH_ParamAccess.item);
-            pManager.AddBrepParameter("Room Breps", "Rs", "Rooms as Breps list", GH_ParamAccess.list);
-            pManager.AddTextParameter("Room Names", "Ns", "Room Names", GH_ParamAccess.list);
+            pManager.AddBrepParameter("Corridors", "C", "Corridors as Breps", GH_ParamAccess.tree);
+            pManager.AddBrepParameter("Room Breps", "Rs", "Rooms as Breps list", GH_ParamAccess.tree);
+            pManager.AddTextParameter("Room Names", "Ns", "Room Names", GH_ParamAccess.tree);
             //pManager.AddSurfaceParameter("GridCells", "GC", "Grid cells as surfaces", GH_ParamAccess.list);
             //pManager.AddIntegerParameter("xGridDim", "G_X", "xGridDim", GH_ParamAccess.item);
             //pManager.AddCurveParameter("Boundary", "B", "Boundary", GH_ParamAccess.item);
-            pManager.AddTextParameter("Adjacencies", "A", "Adjacencies as list of string \"1 - 3, 2 - 4,..\"", GH_ParamAccess.item);
-            pManager.AddIntegerParameter("MissingAdjacences", "!A", "Missing Adjacences for every room of the list", GH_ParamAccess.list);
+            pManager.AddTextParameter("Adjacencies", "A", "Adjacencies as list of string \"1 - 3, 2 - 4,..\"", GH_ParamAccess.tree);
+            pManager.AddIntegerParameter("MissingAdjacences", "!A", "Missing Adjacences for every room of the list", GH_ParamAccess.tree);
         }
 
         /// <summary>
@@ -108,9 +113,14 @@ namespace FloorPlan_Generator
             int x = 0;
             int y = 0;
 
+            int displayNumber = 1;
+            int gapOfResult = 1;
+
             DA.GetData("Iterations", ref iterations);
             DA.GetData("MaxAdjDistance", ref maxAdjDistance);
 
+            DA.GetData("Display Number", ref displayNumber);
+            DA.GetData("Gap of Result", ref gapOfResult);
             // Let's deal with setting boundary curve. The curve is rotated so it fits best into rectangle. 
             // Then all cells are generated as surfaces and rotated back again
             // Moreover, we should rotate the starting point also
@@ -318,7 +328,7 @@ namespace FloorPlan_Generator
 
                             if (!GridContains(grid, roomNum))
                             {
-                                if (TryPlaceNewRoomToTheGrid(ref grid, roomList[roomNum - 1].RoomArea, roomNum, adjArray, maxAdjDistance, roomList[roomNum - 1].isHall))
+                                if (TryPlaceNewRoomToTheGrid(ref grid, roomList[roomNum - 1].RoomArea, roomList[roomNum - 1].RoomLength, roomNum, adjArray, maxAdjDistance, roomList[roomNum - 1].isHall))
                                     roomOrder.Add(roomNum - 1);
                                 else
                                     break;
@@ -350,7 +360,72 @@ namespace FloorPlan_Generator
            // AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, gridSolutionsHeap[gridSolutionsHeap.Count - 1].roomOrder.Count.ToString());
 
 
-            bestGrid = gridSolutionsHeap[0].grid.Clone() as int[,];
+            GridSet gridSet = new GridSet();
+
+            //gridSet = OutputGrid(gridSolutionsHeap[0].grid.Clone() as int[,], x, y, houseInstance, gridSurfaceArray);
+
+            List<GridSet> gridSets = OutputModels(displayNumber, gapOfResult, x, y, houseInstance, gridSurfaceArray);
+
+            DataTree<Brep> roomBreps = new DataTree<Brep>();
+            DataTree<Brep> corridors = new DataTree<Brep>();
+            DataTree<int> missingAdjacences = new DataTree<int>();
+            DataTree<string> adjacencies = new DataTree<string>();
+            DataTree<string> roomNames = new DataTree<string>();
+
+            for (int i = 0; i < gridSets.Count; i++)
+            {
+                roomBreps.AddRange(gridSets[i].RoomBrepsList, new GH_Path(i));
+                corridors.Add(gridSets[i].CorridorsBrep, new GH_Path(i));
+                missingAdjacences.AddRange(gridSets[i].MissingRoomAdjSortedList, new GH_Path(i));
+                adjacencies.Add(gridSets[i].AdjacenciesOutputString, new GH_Path(i));
+                roomNames.AddRange(gridSets[i].RoomNames, new GH_Path(i));
+            }
+
+            DA.SetDataTree(1, roomBreps);
+            DA.SetDataTree(0, corridors);
+            // DA.SetDataList("GridCells", gridSurfaceArray);
+            // DA.SetData("xGridDim", x);
+            DA.SetDataTree(4, missingAdjacences);
+            // DA.SetData("Boundary", boundaryCrv);
+            DA.SetDataTree(3, adjacencies);
+            DA.SetDataTree(2, roomNames);
+
+            this.Message = gridSolutionsHeap[0].roomOrder.Count + " of " + roomList.Count + " placed";
+        }
+
+
+        private List<GridSet> OutputModels(int modelCount, int step, int x, int y, HouseInstance houseInstance, Surface[] gridSurfaceArray)
+        {
+            if (step < 1)
+                step = 1;
+            List<GridSet> outputModels = new List<GridSet>();
+            List<int[,]> grids = new List<int[,]>();
+
+            for (int i = 0; i < gridSolutionsHeap.Count; i += step)
+            {
+                if (i < gridSolutionsHeap.Count - 1 && i < modelCount * step)
+                    grids.Add(gridSolutionsHeap[i].grid.Clone() as int[,]);
+            }
+
+            foreach (var grid in grids)
+            {
+                outputModels.Add(OutputGrid(grid, x, y, houseInstance, gridSurfaceArray));
+            }
+            return outputModels;
+        }
+
+        private GridSet OutputGrid(int[,] bestGrid, int x, int y, HouseInstance houseInstance, Surface[] gridSurfaceArray)
+        {
+            GridSet gridSet = new GridSet();
+
+            List<int> roomAreas = new List<int>();
+            List<int> gridOutput = new List<int>();
+            List<string> adjStrList = new List<string>();
+
+            List<RoomInstance> roomList = houseInstance.RoomInstances;
+            Curve boundaryCrv = houseInstance.boundary;
+            int[,] adjArray = houseInstance.adjArray;
+
 
             if (removeDeadEndsChecked)
             {
@@ -359,7 +434,7 @@ namespace FloorPlan_Generator
             }
 
 
-                if (removeAllCorridorsChecked)
+            if (removeAllCorridorsChecked)
                 RemoveAllCorridors(ref bestGrid, gridSolutionsHeap[0].roomCellsList);
 
 
@@ -404,7 +479,7 @@ namespace FloorPlan_Generator
                 if (!roomList[placedRoomsNums[i] - 1].isHall)
                     roomNames.Add(roomList[placedRoomsNums[i] - 1].RoomName);
                 else
-                    roomNames.Add("&&HALL&&"+ roomList[placedRoomsNums[i] - 1].RoomName);
+                    roomNames.Add("&&HALL&&" + roomList[placedRoomsNums[i] - 1].RoomName);
             }
 
 
@@ -448,17 +523,16 @@ namespace FloorPlan_Generator
                 if (placedRoomsNums.Contains(adjArray[i, 0]) && placedRoomsNums.Contains(adjArray[i, 1]))
                     adjacenciesOutputString += placedRoomsNums.IndexOf(adjArray[i, 0]) + "-" + placedRoomsNums.IndexOf(adjArray[i, 1]) + "\n";
 
-            DA.SetDataList("Room Breps", roomBrepsList);
-            DA.SetData("Corridors", corridorsBrep);
-            // DA.SetDataList("GridCells", gridSurfaceArray);
-            // DA.SetData("xGridDim", x);
-            DA.SetDataList("MissingAdjacences", missingRoomAdjSortedList);
-            // DA.SetData("Boundary", boundaryCrv);
-            DA.SetData("Adjacencies", adjacenciesOutputString);
-            DA.SetDataList("Room Names", roomNames);
 
-            this.Message = gridSolutionsHeap[0].roomOrder.Count + " of " + roomList.Count + " placed";
+            gridSet.RoomBrepsList = roomBrepsList;
+            gridSet.CorridorsBrep = corridorsBrep;
+            gridSet.MissingRoomAdjSortedList = missingRoomAdjSortedList;
+            gridSet.AdjacenciesOutputString = adjacenciesOutputString;
+            gridSet.RoomNames = roomNames;
+
+            return gridSet;
         }
+
 
         private void RemoveDeadEnds(ref int[,] grid, List<RoomCells> roomCellsList)
         {
@@ -569,6 +643,16 @@ namespace FloorPlan_Generator
                 }
         }
 
+
+        private class GridSet
+        {
+            public List<Brep> RoomBrepsList = new List<Brep>();
+            public Brep CorridorsBrep = new Brep();
+            public List<int> MissingRoomAdjSortedList = new List<int>();
+            public List<string> RoomNames = new List<string>();
+            public string AdjacenciesOutputString = "";
+        }
+
         private class GridSolution
         {
             public int[,] grid;
@@ -616,7 +700,7 @@ namespace FloorPlan_Generator
             return missingAdj;
         }
 
-        public bool TryPlaceNewRoomToTheGrid(ref int[,] grid, int area, int roomNum, int[,] adjArray, double maxAdjDistance, bool isHall = false)
+        public bool TryPlaceNewRoomToTheGrid(ref int[,] grid, int area, double length, int roomNum, int[,] adjArray, double maxAdjDistance, bool isHall = false)
         {
             int[,] availableCellsGrid = new int[grid.GetLength(0), grid.GetLength(1)];  //= grid;
             int[,] room = new int[50, 50];
@@ -658,12 +742,16 @@ namespace FloorPlan_Generator
               } */
 
             // New variant:
-            double ratio = 1 + random.NextDouble() * 1f;
-            double xDim_d = Math.Sqrt(area / ratio);
-            double yDim_d = ratio * Math.Sqrt(area / ratio);
+            //double ratio = 1 + random.NextDouble() * 1f;
+            //double xDim_d = Math.Sqrt(area / ratio);
+            //double yDim_d = ratio * Math.Sqrt(area / ratio);
 
-            xDim = (int)Math.Round(xDim_d);
-            yDim = (int)Math.Round(yDim_d);
+            //xDim = (int)Math.Round(xDim_d);
+            //yDim = (int)Math.Round(yDim_d);
+
+            xDim = (int)Math.Round(length);
+            yDim = (int)Math.Round(area / length);
+
 
             if (xDim == 0)
                 xDim++;

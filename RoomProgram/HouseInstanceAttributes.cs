@@ -281,9 +281,12 @@ namespace FloorPlan_Generator
             string roomInstancesListString = reader.GetString("RoomInstancesListString");
             string[] strArray = roomInstancesListString.Split('@');
 
+            GH_Document document = Owner.OnPingDocument();
+
             foreach (string guidS in strArray) try
                 {
-                    roomInstancesList.Add(Owner.OnPingDocument().FindComponent(
+                    if(document != null)
+                        roomInstancesList.Add(document.FindComponent(
                         new System.Drawing.Point(int.Parse(guidS.Split('!')[0]), int.Parse(guidS.Split('!')[1]))) as RoomInstance);
                 }
                 catch (Exception e) { }

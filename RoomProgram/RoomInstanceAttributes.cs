@@ -61,8 +61,8 @@ namespace FloorPlan_Generator
         public Brush roomBrush;// = Brushes.DimGray;
 
         const int InflateAmount = 2; // Used to inflate all rectangles for producing outer rectangles for GH_TextCapsules
-        const int InnerComponentRadius = 55; // Used to define the radius of the main circle
-        const int OuterComponentRadius = 75; // Used to define the radius of the main circle
+        const int InnerComponentRadius = 65; // Used to define the radius of the main circle
+        const int OuterComponentRadius = 80; // Used to define the radius of the main circle
 
         public string[] writerTargetObjectsListString = new string[0];
 
@@ -116,12 +116,13 @@ namespace FloorPlan_Generator
                     capsule.Render(graphics, Selected, Owner.Locked, true);
                     capsule.Dispose();
 
-                    RoomNameRectangle = new Rectangle(new System.Drawing.Point((int)Bounds.Location.X + 28, (int)Bounds.Location.Y + 55), new Size(94, 20));
-                    RoomAreaRectangle = new Rectangle(new System.Drawing.Point((int)Bounds.Location.X + 65, (int)Bounds.Location.Y + 80), new Size(57, 20));
-                    RoomLengthRectangle = new Rectangle(new System.Drawing.Point((int)Bounds.Location.X + 65, (int)Bounds.Location.Y + 105), new Size(57, 20));
-                    RoomIdRectangle = new Rectangle(new System.Drawing.Point((int)Bounds.Location.X + 35, (int)Bounds.Location.Y + 130), new Size(80, 40));
+                    RoomNameRectangle = new Rectangle(new System.Drawing.Point((int)Bounds.Location.X + 28, (int)Bounds.Location.Y + 45), new Size(94, 20));
+                    RoomAreaRectangle = new Rectangle(new System.Drawing.Point((int)Bounds.Location.X + 65, (int)Bounds.Location.Y + 70), new Size(57, 20));
+                    RoomLengthRectangle = new Rectangle(new System.Drawing.Point((int)Bounds.Location.X + 65, (int)Bounds.Location.Y + 95), new Size(57, 20));
+                    RoomIdRectangle = new Rectangle(new System.Drawing.Point((int)Bounds.Location.X + 35, (int)Bounds.Location.Y + 100), new Size(80, 40));
 
-                    graphics.DrawString("m² :", SystemFonts.IconTitleFont, Brushes.Black, new RectangleF(new System.Drawing.Point((int)Bounds.Location.X + 35, (int)Bounds.Location.Y + 81), new Size(30, 20)));
+                    graphics.DrawString("m² :", SystemFonts.IconTitleFont, Brushes.Black, new RectangleF(new System.Drawing.Point((int)Bounds.Location.X + 35, (int)Bounds.Location.Y + 71), new Size(30, 20)));
+                    graphics.DrawString("length :", SystemFonts.IconTitleFont, Brushes.Black, new RectangleF(new System.Drawing.Point((int)Bounds.Location.X + 35, (int)Bounds.Location.Y + 96), new Size(30, 20)));
                     if (!RoomInstance.entranceIds.Contains(roomInstance.RoomId))
                         graphics.DrawString("ID: " + roomInstance.RoomId, new Font(FontFamily.GenericSansSerif, 6f, FontStyle.Regular), Brushes.Black, RoomIdRectangle, new StringFormat() { Alignment = StringAlignment.Center });
                     else
@@ -429,7 +430,7 @@ namespace FloorPlan_Generator
                                                                             //    (Owner as RoomInstance).RoomId = (uint)reader.GetInt32("RoomId");//, (int)(Owner as RoomInstance).RoomId);
             (Owner as RoomInstance).RoomArea = (int)Math.Floor(reader.GetDouble("RoomArea"));//, (Owner as RoomInstance).RoomArea);
 
-            //(Owner as RoomInstance).RoomLength = Math.Floor(reader.GetDouble("RoomLength"));
+            (Owner as RoomInstance).RoomLength = Math.Floor(reader.GetDouble("RoomLength"));
 
             RoomInstance.entranceIds = new List<int>();
             string temp = "";

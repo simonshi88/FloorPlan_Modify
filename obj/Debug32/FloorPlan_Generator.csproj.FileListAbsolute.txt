@@ -14,3 +14,11 @@ E:\code\vs\Magnetizing_FloorPlanGenerator\obj\Debug32\FloorPlan_Generator.dll
 E:\code\vs\Magnetizing_FloorPlanGenerator\obj\Debug32\FloorPlan_Generator.pdb
 E:\code\vs\Magnetizing_FloorPlanGenerator\bin\FloorPlan_Generator.dll
 E:\code\vs\Magnetizing_FloorPlanGenerator\bin\FloorPlan_Generator.pdb
+E:\code\vs\FloorPlan_Modify\bin\FloorPlan_Generator.dll
+E:\code\vs\FloorPlan_Modify\bin\FloorPlan_Generator.pdb
+E:\code\vs\FloorPlan_Modify\obj\Debug32\FloorPlan_Generator.csproj.AssemblyReference.cache
+E:\code\vs\FloorPlan_Modify\obj\Debug32\FloorPlan_Generator.Properties.Resources.resources
+E:\code\vs\FloorPlan_Modify\obj\Debug32\FloorPlan_Generator.csproj.GenerateResource.cache
+E:\code\vs\FloorPlan_Modify\obj\Debug32\FloorPlan_Generator.csproj.CoreCompileInputs.cache
+E:\code\vs\FloorPlan_Modify\obj\Debug32\FloorPlan_Generator.dll
+E:\code\vs\FloorPlan_Modify\obj\Debug32\FloorPlan_Generator.pdb
