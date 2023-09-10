@@ -73,6 +73,7 @@
     <Compile Include="RoomProgram\HouseInstanceAttributes.cs" />
     <Compile Include="RoomProgram\RoomInstance.cs" />
     <Compile Include="RoomProgram\RoomInstanceAttributes.cs" />
+    <Compile Include="GA.cs" />
     <None Include="RoomProgram\RoomName.cs" />
     <Compile Include="Study4\David.cs" />
     <Compile Include="Study4\MagnetizingRooms_HeapES.cs" />
