@@ -12,7 +12,9 @@ namespace FloorPlan_Generator
 {
     public class Script_Instance
     {
-        private void RunScript(List<Line> boundary, DataTree<Line> roomsBoundary, List<Point3d> centerPoint, List<string> roomName, List<double> roomDaylightFactor, List<double> genePool, ref object A, ref object B, ref object FloorPolyLines, ref object y1, ref object Kc, ref object Gc, ref object Fitness)
+        private void RunScript(List<Line> boundary, DataTree<Line> roomsBoundary, List<Point3d> centerPoint, List<string> roomName, 
+            List<double> roomDaylightFactor, List<double> genePool, double control_y1, double control_kc, double control_gc, 
+            ref object A, ref object B, ref object FloorPolyLines, ref object y1, ref object Kc, ref object Gc, ref object Fitness)
         {
             A = ClassifyLines(boundary, roomsBoundary);
 
@@ -29,9 +31,11 @@ namespace FloorPlan_Generator
 
 
             Floor floor = new Floor(walls, roomName, roomDaylightFactor, genePool);
+            floor.Fitness = floor.DataProcess(control_y1, control_kc, control_gc);
+
 
             FloorPolyLines = floor.FloorPolylines;
-
+           
             y1 = floor.Y1;
             Kc = floor.KC;
             Gc = floor.GC;
@@ -166,7 +170,6 @@ namespace FloorPlan_Generator
 
                 FloorPolylines = GetLinesInEachDirection();
 
-                Fitness = DataProcess();
             }
 
             public DataTree<Polyline> GetLinesInEachDirection()
@@ -252,7 +255,7 @@ namespace FloorPlan_Generator
                 return Math.Round(remappedValue, 1);
             }
 
-            public double DataProcess()
+            public double DataProcess(double multipl_y1, double multipl_kc, double multipl_gc)
             {
                 double fitness = 0;
 
@@ -270,17 +273,20 @@ namespace FloorPlan_Generator
                 //gc的取值范围[0.3, 0.6]
                 List<double> Gc = paraGc.Select(x => Remap(x, 0.1, 1, 0.3, 0.6)).ToList();
 
+                //Y1:距离地面高度
                 Y1 = ConvertToTree(SplitGroup(y1, 4, RoomName.Count));
+                //KC:侧面采光的窗宽系数，为窗宽度与房间宽度之比
                 KC = ConvertToTree(SplitGroup(Kc, 4, RoomName.Count));
+                //GC:侧面采光的窗高系数，为窗高度与层高之比
                 GC = ConvertToTree(SplitGroup(Gc, 4, RoomName.Count));
 
 
                 List<List<double>> eachDirection = SplitGroup(Kc, 4, RoomName.Count);
 
-                fitness = CalculateWest(eachDirection[0]) + CalculateNorth(eachDirection[1]) +
+                fitness = multipl_kc * CalculateWest(eachDirection[0]) + CalculateNorth(eachDirection[1]) +
                     CalculateEast(eachDirection[2]) + CalculateSouth(eachDirection[3]) +
-                    CalculateHeight(Y1) +
-                    CalculateRoomDaylightFactor(GC, KC);
+                    multipl_y1 * CalculateHeight(Y1) +
+                    multipl_gc * CalculateRoomDaylightFactor(GC, KC);
 
 
                 return fitness;
@@ -453,7 +459,15 @@ namespace FloorPlan_Generator
                         if (pls[j] != null)
                         {
                             double daylightFactor = CavMatrix[RemapGC(gcValues.Branch(i)[j]), RemapKC(kcValues.Branch(i)[j])];
-                            score += CalculateScore(5, daylightFactor, DayLightFactor[j]);
+
+                            //算出在y1，gc的条件下，窗最终的高度
+                            var totalHeight = Y1.Branch(i)[j] + 2.8 * gcValues.Branch(i)[j];
+                            //如果在正常范围内，低于floor0.3m
+                            if (totalHeight <= 2.8 - 0.3)  
+                                score += CalculateScore(5, daylightFactor, DayLightFactor[j]);
+                            //如果窗户高于层高，总分递减，不应该出现这种错误场景
+                            else
+                                score -= 50 *(totalHeight -2.5) ;
                         }
                     }
 
